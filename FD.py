@@ -36,6 +36,18 @@ supabase: Client | None = (
 )
 
 # =========================================
+# SESSION STATE
+# =========================================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
+if "user_id" not in st.session_state:
+    st.session_state.user_id = None
+if "auth_checked" not in st.session_state:
+    st.session_state.auth_checked = False
+
+# =========================================
 # PREMIUM UI
 # =========================================
 st.markdown(
@@ -43,7 +55,7 @@ st.markdown(
     <style>
     .stApp {
         background:
-            radial-gradient(circle at top left, rgba(99,102,241,0.20), transparent 28%),
+            radial-gradient(circle at top left, rgba(99,102,241,0.18), transparent 28%),
             radial-gradient(circle at top right, rgba(14,165,233,0.14), transparent 24%),
             linear-gradient(180deg, #081120 0%, #0B1220 45%, #0E1424 100%);
         color: #E5E7EB;
@@ -51,13 +63,13 @@ st.markdown(
 
     section[data-testid="stSidebar"] {
         background: linear-gradient(180deg, #0B1220 0%, #0F172A 100%);
-        border-right: 1px solid rgba(148,163,184,0.18);
+        border-right: 1px solid rgba(148,163,184,0.15);
     }
 
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.8rem;
         padding-bottom: 2rem;
-        max-width: 1250px;
+        max-width: 1280px;
     }
 
     .hero-card {
@@ -73,14 +85,40 @@ st.markdown(
         background: linear-gradient(180deg, rgba(15,23,42,0.90), rgba(17,24,39,0.88));
         border: 1px solid rgba(148,163,184,0.14);
         border-radius: 18px;
-        padding: 18px 18px 10px 18px;
+        padding: 18px 18px 12px 18px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.20);
         margin-bottom: 1rem;
     }
 
     .small-muted {
         color: #94A3B8;
-        font-size: 0.95rem;
+        font-size: 0.96rem;
+        line-height: 1.6;
+    }
+
+    .auth-wrap {
+        max-width: 1150px;
+        margin: 1rem auto 0 auto;
+    }
+
+    .auth-title {
+        text-align: center;
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+    }
+
+    .auth-subtitle {
+        text-align: center;
+        color: #94A3B8;
+        margin-bottom: 1.5rem;
+        font-size: 1.05rem;
+    }
+
+    .feature-bullet {
+        color: #CBD5E1;
+        margin-bottom: 0.7rem;
+        font-size: 1rem;
     }
 
     div[data-testid="metric-container"] {
@@ -105,35 +143,39 @@ st.markdown(
         margin-bottom: 8px;
     }
 
-    .auth-wrap {
-        max-width: 760px;
-        margin: 2rem auto 0 auto;
+    .status-card {
+        background: linear-gradient(135deg, rgba(17,24,39,0.92), rgba(15,23,42,0.92));
+        border: 1px solid rgba(34,197,94,0.20);
+        border-radius: 16px;
+        padding: 14px 16px;
+        margin-bottom: 1rem;
     }
 
-    .auth-title {
-        text-align: center;
-        font-size: 2.6rem;
-        font-weight: 800;
-        margin-bottom: 0.35rem;
-    }
-
-    .auth-subtitle {
-        text-align: center;
-        color: #94A3B8;
-        margin-bottom: 1.5rem;
-    }
-
-    .stButton>button, .stDownloadButton>button {
+    .stButton > button, .stDownloadButton > button {
         border-radius: 12px !important;
         border: none !important;
         background: linear-gradient(90deg, #6366F1, #8B5CF6) !important;
         color: white !important;
         font-weight: 600 !important;
-        box-shadow: 0 8px 20px rgba(99,102,241,0.25);
+        box-shadow: 0 8px 20px rgba(99,102,241,0.28);
+        transition: all 0.2s ease !important;
     }
 
-    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stMultiSelect div[data-baseweb="select"] {
-        border-radius: 12px !important;
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 26px rgba(99,102,241,0.34);
+    }
+
+    .stTextInput input {
+        background-color: #1F2937 !important;
+        border: 1px solid #374151 !important;
+        border-radius: 10px !important;
+        color: white !important;
+    }
+
+    .stTextInput input:focus {
+        border: 1px solid #6366F1 !important;
+        box-shadow: 0 0 0 1px #6366F1 !important;
     }
 
     div[data-testid="stFileUploader"] {
@@ -146,16 +188,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-# =========================================
-# SESSION STATE
-# =========================================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "user_email" not in st.session_state:
-    st.session_state.user_email = None
-if "user_id" not in st.session_state:
-    st.session_state.user_id = None
 
 # =========================================
 # HELPERS
@@ -206,7 +238,7 @@ def create_pdf_report(
 
 def generate_ai_insight(metric_name: str, metric_value, z_score_value) -> str:
     if not openai_client:
-        raise ValueError("Missing OPENAI_API_KEY")
+        raise ValueError("OPENAI_API_KEY is missing.")
 
     prompt = f"""
 You are a senior audit analytics assistant.
@@ -232,13 +264,13 @@ Use clear business language.
 
 def sign_up_user(email: str, password: str):
     if not supabase:
-        raise ValueError("Supabase is not configured")
+        raise ValueError("Supabase is not configured.")
     return supabase.auth.sign_up({"email": email, "password": password})
 
 
 def sign_in_user(email: str, password: str):
     if not supabase:
-        raise ValueError("Supabase is not configured")
+        raise ValueError("Supabase is not configured.")
     return supabase.auth.sign_in_with_password({"email": email, "password": password})
 
 
@@ -258,29 +290,27 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True,
     )
 
-    auth_left, auth_right = st.columns([1.15, 1], gap="large")
+    left, right = st.columns([1.1, 1], gap="large")
 
-    with auth_left:
+    with left:
         st.markdown(
             """
             <div class="hero-card">
-                <h2 style="margin-top:0;">Enterprise-style Audit Analytics</h2>
+                <h1 style="margin-top:0; line-height:1.15;">Enterprise-style<br>Audit Analytics</h1>
                 <p class="small-muted">
-                Detect financial anomalies, generate AI-supported audit commentary,
-                and export professional PDF and Excel outputs from one dashboard.
+                    Detect financial anomalies, generate AI-supported audit commentary,
+                    and export professional PDF and Excel outputs from one dashboard.
                 </p>
-                <ul class="small-muted">
-                    <li>Multi-metric anomaly analysis</li>
-                    <li>AI-generated audit explanations</li>
-                    <li>Excel workpapers + PDF reports</li>
-                    <li>Secure user access with Supabase Auth</li>
-                </ul>
+                <div class="feature-bullet">• Multi-metric anomaly analysis</div>
+                <div class="feature-bullet">• AI-generated audit explanations</div>
+                <div class="feature-bullet">• Excel workpapers + PDF reports</div>
+                <div class="feature-bullet">• Secure user access with Supabase Auth</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-    with auth_right:
+    with right:
         login_tab, signup_tab = st.tabs(["Login", "Create account"])
 
         with login_tab:
@@ -314,7 +344,7 @@ if not st.session_state.logged_in:
                 else:
                     try:
                         sign_up_user(new_email, new_password)
-                        st.success("Account created. Check your email if confirmation is enabled, then login.")
+                        st.success("Account created. If email confirmation is enabled, verify your email before login.")
                     except Exception as e:
                         st.error(f"Signup error: {e}")
 
@@ -346,7 +376,7 @@ st.markdown(
     """
     <div class="hero-card">
         <div style="font-size:3rem;font-weight:800;line-height:1.05;">ProAudit AI</div>
-        <div style="font-size:1.15rem;font-weight:700;margin-top:0.8rem;">Real-Time Audit Intelligence Platform</div>
+        <div style="font-size:1.18rem;font-weight:700;margin-top:0.8rem;">Real-Time Audit Intelligence Platform</div>
         <div class="small-muted" style="margin-top:0.8rem;">
             Detect anomalies • Generate AI insights • Export audit-ready reports
         </div>
@@ -359,11 +389,12 @@ st.markdown(
 # FILE UPLOAD
 # =========================================
 st.markdown('<div class="section-card">', unsafe_allow_html=True)
+st.markdown("### 📂 Upload Financial Data")
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 st.markdown("</div>", unsafe_allow_html=True)
 
 if not uploaded_file:
-    st.info("📂 Upload a CSV file to begin analysis.")
+    st.info("📊 No data loaded yet. Upload a CSV file to begin analysis.")
     st.stop()
 
 # =========================================
@@ -424,8 +455,18 @@ anomalies = (
 risk_label = "High" if len(anomalies) > 10 else "Medium" if len(anomalies) > 3 else "Low"
 
 # =========================================
-# KPI CARDS
+# STATUS / KPI
 # =========================================
+st.markdown(
+    f"""
+    <div class="status-card">
+        <span style="font-weight:700;">✅ System Ready</span>
+        <span class="small-muted"> — File loaded successfully: {uploaded_file.name}</span>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("📊 Records", len(df))
 k2.metric("⚠️ Anomalies", len(anomalies))
@@ -599,4 +640,5 @@ elif page == "📄 Reports":
 
     if not anomalies.empty:
         st.info("Go to the Anomalies page to generate and download the AI PDF report.")
+
     st.markdown("</div>", unsafe_allow_html=True)
