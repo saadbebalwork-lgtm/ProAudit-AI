@@ -1,10 +1,10 @@
 import io
 import os
+import hashlib
 from datetime import datetime
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 from openai import OpenAI
 from reportlab.lib.pagesizes import letter
@@ -34,10 +34,18 @@ st.set_page_config(
 )
 
 # =========================================
-# OPENAI
+# OPENAI / STRIPE
 # =========================================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
+# Use a Stripe Payment Link for now.
+# This is the safest way to add billing inside your current Streamlit app
+# without building webhook/backend enforcement yet.
+STRIPE_PAYMENT_LINK = os.getenv(
+    "STRIPE_PAYMENT_LINK",
+    st.secrets.get("STRIPE_PAYMENT_LINK", "")
+)
 
 # =========================================
 # SESSION STATE
@@ -50,6 +58,7 @@ defaults = {
     "selected_client_name": None,
     "last_ai_text": None,
     "chat_history": [],
+    "last_saved_run_key": None,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -183,6 +192,17 @@ st.markdown(
         box-shadow: 0 8px 20px rgba(99,102,241,0.28);
     }
 
+    .stLinkButton > a {
+        border-radius: 12px !important;
+        border: none !important;
+        background: linear-gradient(90deg, #6366F1, #8B5CF6) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        padding: 0.7rem 1rem !important;
+        display: inline-block !important;
+    }
+
     .stTextInput input, .stTextArea textarea {
         background-color: #1F2937 !important;
         border: 1px solid #374151 !important;
@@ -217,8 +237,10 @@ def safe_date_column(df: pd.DataFrame) -> pd.DataFrame:
         df["Date"] = range(len(df))
     return df
 
+
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[:, ~df.columns.astype(str).str.contains(r"^Unnamed")]
+
 
 def create_pdf_report(username: str, client_name: str, ai_text: str, selected_metric: str, anomaly_value, anomaly_zscore) -> bytes:
     buffer = io.BytesIO()
@@ -243,6 +265,7 @@ def create_pdf_report(username: str, client_name: str, ai_text: str, selected_me
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
+
 
 def generate_ai_insight(metric_name: str, metric_value, z_score_value) -> str:
     if not openai_client:
@@ -269,6 +292,7 @@ Use clear business language.
     )
     return response.choices[0].message.content.strip()
 
+
 def generate_chat_response(question: str, df_summary: str, anomaly_summary: str) -> str:
     if not openai_client:
         raise ValueError("OPENAI_API_KEY is missing.")
@@ -294,6 +318,55 @@ Answer in concise, professional audit language.
     )
     return response.choices[0].message.content.strip()
 
+
+def file_run_key(client_id: str, filename: str, selected_cols: list[str], anomaly_count: int, risk_label: str) -> str:
+    raw = f"{client_id}|{filename}|{','.join(selected_cols)}|{anomaly_count}|{risk_label}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def get_team_members(client_id: str):
+    try:
+        res = (
+            supabase.table("client_members")
+            .select("*")
+            .eq("client_id", client_id)
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return res.data or []
+    except Exception:
+        return []
+
+
+def invite_team_member(client_id: str, owner_user_id: str, email: str, role: str):
+    return (
+        supabase.table("client_members")
+        .insert(
+            {
+                "client_id": client_id,
+                "owner_user_id": owner_user_id,
+                "member_email": email,
+                "role": role,
+            }
+        )
+        .execute()
+    )
+
+
+def get_billing_status(user_id: str):
+    try:
+        res = (
+            supabase.table("billing_customers")
+            .select("*")
+            .eq("user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        data = res.data or []
+        return data[0] if data else None
+    except Exception:
+        return None
+
 # =========================================
 # AUTH SCREEN
 # =========================================
@@ -314,9 +387,9 @@ if not st.session_state.logged_in:
                     and export professional PDF and Excel outputs from one dashboard.
                 </p>
                 <div class="feature-bullet">• Multi-client workspace</div>
-                <div class="feature-bullet">• AI audit copilot</div>
-                <div class="feature-bullet">• Excel workpapers + PDF reports</div>
-                <div class="feature-bullet">• Secure user access with Supabase Auth</div>
+                <div class="feature-bullet">• GPT audit copilot</div>
+                <div class="feature-bullet">• Team collaboration</div>
+                <div class="feature-bullet">• Billing-ready SaaS structure</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -333,7 +406,6 @@ if not st.session_state.logged_in:
                     result = sign_in_user(email, password)
                     user = getattr(result, "user", None)
                     if user:
-                        # Critical: attach auth token to postgrest
                         active_user = set_auth()
                         st.session_state.logged_in = True
                         st.session_state.user_email = getattr(active_user, "email", email) if active_user else getattr(user, "email", email)
@@ -378,7 +450,10 @@ st.session_state.user_id = getattr(active_user, "id", st.session_state.user_id)
 st.sidebar.markdown("## 🧠 ProAudit AI")
 st.sidebar.caption("Audit Intelligence Platform")
 
-page = st.sidebar.radio("Go to", ["📊 Dashboard", "⚠️ Anomalies", "📄 Reports"])
+page = st.sidebar.radio(
+    "Go to",
+    ["📊 Dashboard", "⚠️ Anomalies", "📄 Reports", "👥 Team", "💳 Billing"]
+)
 
 st.sidebar.markdown("---")
 st.sidebar.write(f"Logged in as: **{st.session_state.user_email}**")
@@ -388,8 +463,16 @@ all_clients = get_clients(st.session_state.user_id)
 client_name_map = {client["client_name"]: client["id"] for client in all_clients if "client_name" in client and "id" in client}
 
 if all_clients:
-    default_client_name = st.session_state.selected_client_name if st.session_state.selected_client_name in client_name_map else all_clients[0]["client_name"]
-    selected_client_name = st.sidebar.selectbox("Select client", options=list(client_name_map.keys()), index=list(client_name_map.keys()).index(default_client_name))
+    default_client_name = (
+        st.session_state.selected_client_name
+        if st.session_state.selected_client_name in client_name_map
+        else all_clients[0]["client_name"]
+    )
+    selected_client_name = st.sidebar.selectbox(
+        "Select client",
+        options=list(client_name_map.keys()),
+        index=list(client_name_map.keys()).index(default_client_name),
+    )
     st.session_state.selected_client_name = selected_client_name
     st.session_state.selected_client_id = client_name_map[selected_client_name]
 else:
@@ -430,7 +513,7 @@ with top_left:
             <div style="font-size:3rem;font-weight:800;line-height:1.05;">ProAudit AI</div>
             <div style="font-size:1.18rem;font-weight:700;margin-top:0.8rem;">Real-Time Audit Intelligence Platform</div>
             <div class="small-muted" style="margin-top:0.8rem;">
-                Detect anomalies • Generate AI insights • Export audit-ready reports
+                Detect anomalies • Generate GPT insights • Export audit-ready reports
             </div>
         </div>
         """,
@@ -447,20 +530,119 @@ with top_right:
         unsafe_allow_html=True,
     )
 
-if not st.session_state.selected_client_id:
+if not st.session_state.selected_client_id and page in ["📊 Dashboard", "⚠️ Anomalies", "📄 Reports", "👥 Team"]:
     st.warning("Create and select a client workspace from the sidebar to continue.")
     st.stop()
 
-st.markdown(
-    f"""
-    <div class="mini-card">
-        <b>Workspace:</b> {st.session_state.selected_client_name}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <b>User:</b> {st.session_state.user_email}
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+if st.session_state.selected_client_name:
+    st.markdown(
+        f"""
+        <div class="mini-card">
+            <b>Workspace:</b> {st.session_state.selected_client_name}
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <b>User:</b> {st.session_state.user_email}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# =========================================
+# TEAM PAGE
+# =========================================
+if page == "👥 Team":
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("👥 Team Collaboration")
+
+    members = get_team_members(st.session_state.selected_client_id)
+
+    c1, c2 = st.columns([1.1, 1], gap="large")
+
+    with c1:
+        st.markdown("### Current Members")
+        if members:
+            for member in members:
+                st.markdown(
+                    f"""
+                    <div class="mini-card">
+                        <b>{member.get('member_email', 'Unknown')}</b><br>
+                        <span class="small-muted">Role: {member.get('role', 'viewer')}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.info("No team members added yet.")
+
+    with c2:
+        st.markdown("### Invite Member")
+        invite_email = st.text_input("Member email")
+        invite_role = st.selectbox("Role", ["viewer", "auditor", "admin"])
+        if st.button("Send Invite", use_container_width=True):
+            if not invite_email.strip():
+                st.error("Enter a member email.")
+            else:
+                try:
+                    invite_team_member(
+                        st.session_state.selected_client_id,
+                        st.session_state.user_id,
+                        invite_email.strip(),
+                        invite_role,
+                    )
+                    st.success("Team member added.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not add member: {e}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
+# =========================================
+# BILLING PAGE
+# =========================================
+if page == "💳 Billing":
+    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.subheader("💳 Billing & Plan")
+
+    billing = get_billing_status(st.session_state.user_id)
+
+    plan_name = billing.get("plan_name", "Free") if billing else "Free"
+    plan_status = billing.get("status", "inactive") if billing else "inactive"
+
+    b1, b2 = st.columns([1.05, 1], gap="large")
+
+    with b1:
+        st.markdown(
+            f"""
+            <div class="mini-card">
+                <h3 style="margin-top:0;">Current Plan</h3>
+                <div class="small-muted">Plan: <b>{plan_name}</b></div>
+                <div class="small-muted">Status: <b>{plan_status}</b></div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with b2:
+        st.markdown(
+            """
+            <div class="mini-card">
+                <h3 style="margin-top:0;">Upgrade Features</h3>
+                <div class="small-muted">• Unlimited audit runs</div>
+                <div class="small-muted">• Team collaboration</div>
+                <div class="small-muted">• Priority GPT insights</div>
+                <div class="small-muted">• Advanced exports</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    if STRIPE_PAYMENT_LINK:
+        st.link_button("Upgrade with Stripe", STRIPE_PAYMENT_LINK, use_container_width=True)
+    else:
+        st.info("Add STRIPE_PAYMENT_LINK to Streamlit secrets to enable hosted billing checkout.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 # =========================================
 # FILE UPLOAD
@@ -559,17 +741,27 @@ for col in selected_cols:
 anomalies = pd.concat(results, ignore_index=True) if results else pd.DataFrame(columns=["Date", "Value", "Z_Score", "Metric"])
 risk_label = "High" if len(anomalies) > 10 else "Medium" if len(anomalies) > 3 else "Low"
 
-try:
-    save_audit(
-        st.session_state.user_id,
-        st.session_state.selected_client_id,
-        uploaded_file.name,
-        ", ".join(selected_cols),
-        len(anomalies),
-        risk_label,
-    )
-except Exception:
-    pass
+current_run_key = file_run_key(
+    st.session_state.selected_client_id,
+    uploaded_file.name,
+    selected_cols,
+    len(anomalies),
+    risk_label,
+)
+
+if st.session_state.last_saved_run_key != current_run_key:
+    try:
+        save_audit(
+            st.session_state.user_id,
+            st.session_state.selected_client_id,
+            uploaded_file.name,
+            ", ".join(selected_cols),
+            len(anomalies),
+            risk_label,
+        )
+        st.session_state.last_saved_run_key = current_run_key
+    except Exception as e:
+        st.warning(f"Run not saved: {e}")
 
 st.markdown(
     f"""
@@ -708,7 +900,7 @@ elif page == "⚠️ Anomalies":
 
     with a2:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.subheader("🤖 AI Audit Insight")
+        st.subheader("🤖 GPT Audit Insight")
 
         if anomalies.empty:
             st.info("Upload data with anomalies to generate AI insight.")
@@ -718,7 +910,7 @@ elif page == "⚠️ Anomalies":
             insight_row = metric_anomalies.iloc[0] if not metric_anomalies.empty else anomalies.iloc[0]
 
             try:
-                with st.spinner("Generating AI audit insight..."):
+                with st.spinner("Generating GPT audit insight..."):
                     ai_text = generate_ai_insight(
                         metric_name=insight_row["Metric"],
                         metric_value=insight_row["Value"],
@@ -729,8 +921,8 @@ elif page == "⚠️ Anomalies":
                 st.markdown(
                     f"""
                     <div class="insight-card">
-                        <h4 style="margin-top:0;">🤖 AI Audit Insight</h4>
-                        <p style="margin-bottom:0;">{ai_text}</p>
+                        <h4 style="margin-top:0;">🤖 GPT Audit Insight</h4>
+                        <p style="margin-bottom:0; white-space: pre-wrap;">{ai_text}</p>
                     </div>
                     """,
                     unsafe_allow_html=True,
