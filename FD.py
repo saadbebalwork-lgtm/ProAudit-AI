@@ -29,18 +29,12 @@ from db import (
     update_billing,
 )
 
-# =========================================
-# PAGE CONFIG
-# =========================================
 st.set_page_config(
     page_title="ProAudit AI",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# =========================================
-# OPENAI / STRIPE
-# =========================================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", st.secrets.get("OPENAI_API_KEY", ""))
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
@@ -49,9 +43,6 @@ STRIPE_PAYMENT_LINK = os.getenv(
     st.secrets.get("STRIPE_PAYMENT_LINK", "")
 )
 
-# =========================================
-# SESSION STATE
-# =========================================
 defaults = {
     "logged_in": False,
     "user_email": None,
@@ -72,9 +63,6 @@ if active_user and not st.session_state.logged_in:
     st.session_state.user_email = getattr(active_user, "email", None)
     st.session_state.user_id = getattr(active_user, "id", None)
 
-# =========================================
-# UI DESIGN
-# =========================================
 st.markdown(
     """
     <style>
@@ -82,20 +70,20 @@ st.markdown(
         --bg: #0B1220;
         --panel: #0F172A;
         --panel-2: #111827;
-        --panel-3: #172554;
         --line: rgba(148,163,184,0.16);
+        --line-soft: rgba(148,163,184,0.08);
         --text: #E5E7EB;
         --muted: #94A3B8;
         --primary: #2563EB;
         --primary-2: #1D4ED8;
-        --success: #16A34A;
         --danger: #DC2626;
+        --success: #16A34A;
     }
 
     .stApp {
         background:
-            radial-gradient(circle at top right, rgba(37,99,235,0.16), transparent 22%),
-            radial-gradient(circle at top left, rgba(59,130,246,0.12), transparent 18%),
+            radial-gradient(circle at top right, rgba(37,99,235,0.10), transparent 22%),
+            radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 18%),
             linear-gradient(180deg, #08101D 0%, #0B1220 45%, #0E1728 100%);
         color: var(--text);
     }
@@ -107,30 +95,43 @@ st.markdown(
 
     .block-container {
         max-width: 1340px;
-        padding-top: 1.1rem;
-        padding-bottom: 2rem;
+        padding-top: 1rem;
+        padding-bottom: 1.8rem;
     }
 
     .app-shell {
-        padding-top: 0.35rem;
+        padding-top: 0.15rem;
+    }
+
+    .sidebar-brand {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #F8FAFC;
+        margin-bottom: 4px;
+    }
+
+    .sidebar-caption {
+        color: var(--muted);
+        font-size: 0.92rem;
+        margin-bottom: 16px;
     }
 
     .hero-shell {
-        background: linear-gradient(135deg, rgba(15,23,42,0.94), rgba(10,16,32,0.88));
-        border: 1px solid rgba(59,130,246,0.18);
+        background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(12,18,32,0.92));
+        border: 1px solid rgba(59,130,246,0.16);
         border-radius: 22px;
-        padding: 28px 30px 22px 30px;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.28);
-        margin-bottom: 16px;
+        padding: 28px 30px 24px 30px;
+        box-shadow: 0 20px 48px rgba(0,0,0,0.22);
+        margin-bottom: 14px;
     }
 
     .hero-eyebrow {
         display: inline-block;
-        font-size: 0.83rem;
+        font-size: 0.82rem;
         font-weight: 600;
         color: #BFDBFE;
-        background: rgba(37,99,235,0.14);
-        border: 1px solid rgba(59,130,246,0.20);
+        background: rgba(37,99,235,0.12);
+        border: 1px solid rgba(59,130,246,0.18);
         padding: 6px 10px;
         border-radius: 999px;
         margin-bottom: 14px;
@@ -149,11 +150,32 @@ st.markdown(
         color: var(--muted);
         font-size: 1rem;
         line-height: 1.65;
-        max-width: 920px;
+        max-width: 880px;
+    }
+
+    .top-user-card {
+        background: linear-gradient(180deg, rgba(15,23,42,0.96), rgba(17,24,39,0.94));
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px;
+        min-height: 122px;
+    }
+
+    .top-user-label {
+        color: var(--muted);
+        font-size: 0.86rem;
+        margin-bottom: 10px;
+    }
+
+    .top-user-email {
+        color: #F8FAFC;
+        font-size: 1rem;
+        font-weight: 700;
+        word-break: break-word;
     }
 
     .toolbar-card {
-        background: linear-gradient(180deg, rgba(15,23,42,0.96), rgba(17,24,39,0.94));
+        background: linear-gradient(180deg, rgba(15,23,42,0.94), rgba(17,24,39,0.92));
         border: 1px solid var(--line);
         border-radius: 16px;
         padding: 14px 18px;
@@ -180,29 +202,29 @@ st.markdown(
     }
 
     .section-wrap {
-        background: linear-gradient(180deg, rgba(15,23,42,0.96), rgba(17,24,39,0.94));
+        background: linear-gradient(180deg, rgba(15,23,42,0.95), rgba(17,24,39,0.92));
         border: 1px solid var(--line);
         border-radius: 18px;
-        box-shadow: 0 14px 34px rgba(0,0,0,0.18);
         overflow: hidden;
         margin-bottom: 14px;
+        box-shadow: 0 14px 30px rgba(0,0,0,0.16);
     }
 
     .section-head {
         padding: 16px 18px;
-        border-bottom: 1px solid rgba(148,163,184,0.10);
-        background: linear-gradient(180deg, rgba(30,41,59,0.35), rgba(15,23,42,0.18));
+        border-bottom: 1px solid var(--line-soft);
+        background: linear-gradient(180deg, rgba(30,41,59,0.28), rgba(15,23,42,0.14));
     }
 
     .section-title {
-        font-size: 1.08rem;
+        font-size: 1.04rem;
         font-weight: 700;
         color: #F8FAFC;
         margin: 0;
     }
 
     .section-subtitle {
-        margin-top: 5px;
+        margin-top: 4px;
         color: var(--muted);
         font-size: 0.92rem;
     }
@@ -212,7 +234,7 @@ st.markdown(
     }
 
     .stack-item {
-        background: linear-gradient(180deg, rgba(17,24,39,0.98), rgba(15,23,42,0.92));
+        background: linear-gradient(180deg, rgba(17,24,39,0.98), rgba(15,23,42,0.94));
         border: 1px solid rgba(148,163,184,0.10);
         border-radius: 14px;
         padding: 14px 16px;
@@ -236,7 +258,7 @@ st.markdown(
         background: linear-gradient(180deg, rgba(15,23,42,0.98), rgba(17,24,39,0.95));
         border: 1px solid rgba(148,163,184,0.12);
         border-radius: 16px;
-        padding: 16px 16px 14px 16px;
+        padding: 16px;
         min-height: 108px;
     }
 
@@ -249,7 +271,7 @@ st.markdown(
 
     .metric-value {
         color: #F8FAFC;
-        font-size: 2.1rem;
+        font-size: 2rem;
         line-height: 1;
         font-weight: 800;
     }
@@ -272,6 +294,7 @@ st.markdown(
         padding: 8px 12px;
         font-size: 0.9rem;
         font-weight: 600;
+        margin-bottom: 14px;
     }
 
     .small-muted {
@@ -306,34 +329,19 @@ st.markdown(
         font-size: 0.98rem;
     }
 
-    .top-user-card {
-        background: linear-gradient(180deg, rgba(15,23,42,0.96), rgba(17,24,39,0.94));
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 16px;
-        min-height: 126px;
-    }
-
-    .top-user-label {
-        color: var(--muted);
-        font-size: 0.86rem;
-        margin-bottom: 10px;
-    }
-
-    .top-user-email {
-        color: #F8FAFC;
-        font-size: 1rem;
-        font-weight: 700;
-        word-break: break-word;
+    .danger-wrap button {
+        background: linear-gradient(180deg, #B91C1C, #991B1B) !important;
+        border-color: rgba(239,68,68,0.22) !important;
     }
 
     .stButton > button, .stDownloadButton > button {
+        width: 100%;
         border-radius: 10px !important;
         border: 1px solid rgba(37,99,235,0.18) !important;
         background: linear-gradient(180deg, #2563EB, #1D4ED8) !important;
         color: white !important;
         font-weight: 600 !important;
-        box-shadow: 0 10px 24px rgba(37,99,235,0.22);
+        box-shadow: 0 10px 20px rgba(37,99,235,0.18);
         padding-top: 0.55rem !important;
         padding-bottom: 0.55rem !important;
     }
@@ -343,6 +351,8 @@ st.markdown(
     }
 
     .stLinkButton > a {
+        width: 100%;
+        text-align: center;
         border-radius: 10px !important;
         border: 1px solid rgba(37,99,235,0.18) !important;
         background: linear-gradient(180deg, #2563EB, #1D4ED8) !important;
@@ -362,27 +372,9 @@ st.markdown(
 
     div[data-testid="stFileUploader"] {
         background: rgba(15,23,42,0.82);
-        border: 1px dashed rgba(59,130,246,0.28);
+        border: 1px dashed rgba(59,130,246,0.22);
         border-radius: 16px;
         padding: 10px;
-    }
-
-    .sidebar-brand {
-        font-size: 1.3rem;
-        font-weight: 800;
-        color: #F8FAFC;
-        margin-bottom: 4px;
-    }
-
-    .sidebar-caption {
-        color: var(--muted);
-        font-size: 0.92rem;
-        margin-bottom: 14px;
-    }
-
-    .danger-btn button {
-        background: linear-gradient(180deg, #B91C1C, #991B1B) !important;
-        border-color: rgba(239,68,68,0.22) !important;
     }
 
     .st-emotion-cache-13ln4jf, .st-emotion-cache-1gulkj5 {
@@ -393,9 +385,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# =========================================
-# HELPERS
-# =========================================
 def safe_date_column(df: pd.DataFrame) -> pd.DataFrame:
     date_cols = [col for col in df.columns if "date" in col.lower()]
     if date_cols:
@@ -496,50 +485,6 @@ def file_run_key(client_id: str, filename: str, selected_cols: list[str], anomal
     return hashlib.md5(raw.encode()).hexdigest()
 
 
-def get_team_members(client_id: str):
-    try:
-        res = (
-            supabase.table("client_members")
-            .select("*")
-            .eq("client_id", client_id)
-            .order("created_at", desc=False)
-            .execute()
-        )
-        return res.data or []
-    except Exception:
-        return []
-
-
-def invite_team_member(client_id: str, owner_user_id: str, email: str, role: str):
-    return (
-        supabase.table("client_members")
-        .insert(
-            {
-                "client_id": client_id,
-                "owner_user_id": owner_user_id,
-                "member_email": email,
-                "role": role,
-            }
-        )
-        .execute()
-    )
-
-
-def get_billing_status(user_id: str):
-    try:
-        res = (
-            supabase.table("billing_customers")
-            .select("*")
-            .eq("user_id", user_id)
-            .limit(1)
-            .execute()
-        )
-        data = res.data or []
-        return data[0] if data else None
-    except Exception:
-        return None
-
-
 def render_section_start(title: str, subtitle: str = ""):
     st.markdown(
         f"""
@@ -570,9 +515,6 @@ def render_stack_item(title: str, body: str):
     )
 
 
-# =========================================
-# AUTH SCREEN
-# =========================================
 if not st.session_state.logged_in:
     st.markdown('<div class="auth-shell">', unsafe_allow_html=True)
     st.markdown('<div class="auth-title">ProAudit AI</div>', unsafe_allow_html=True)
@@ -646,7 +588,6 @@ if not st.session_state.logged_in:
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# refresh auth for RLS
 active_user = set_auth()
 if not active_user:
     st.warning("Session expired. Please login again.")
@@ -656,9 +597,6 @@ if not active_user:
 st.session_state.user_email = getattr(active_user, "email", st.session_state.user_email)
 st.session_state.user_id = getattr(active_user, "id", st.session_state.user_id)
 
-# =========================================
-# SIDEBAR
-# =========================================
 st.sidebar.markdown('<div class="sidebar-brand">ProAudit AI</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="sidebar-caption">Audit Intelligence Platform</div>', unsafe_allow_html=True)
 
@@ -685,14 +623,12 @@ if clients:
     st.session_state.selected_client_id = client_map[selected]
     st.session_state.selected_client_name = selected
 
-    col1, col2 = st.sidebar.columns([3, 1])
-    with col2:
-        if st.button("Delete", key="delete_selected_client"):
-            delete_client(st.session_state.selected_client_id)
-            st.session_state.selected_client_id = None
-            st.session_state.selected_client_name = None
-            st.success("Client deleted")
-            st.rerun()
+    if st.sidebar.button("Delete Client", key="delete_selected_client", use_container_width=True):
+        delete_client(st.session_state.selected_client_id)
+        st.session_state.selected_client_id = None
+        st.session_state.selected_client_name = None
+        st.success("Client deleted")
+        st.rerun()
 else:
     st.sidebar.info("No clients found")
 
@@ -713,9 +649,6 @@ if st.sidebar.button("Logout", key="sidebar_logout"):
     st.session_state.clear()
     st.rerun()
 
-# =========================================
-# HEADER
-# =========================================
 st.markdown('<div class="app-shell">', unsafe_allow_html=True)
 
 top_left, top_right = st.columns([5.2, 1.2], gap="large")
@@ -763,9 +696,6 @@ if st.session_state.selected_client_name:
         unsafe_allow_html=True,
     )
 
-# =========================================
-# TEAM PAGE
-# =========================================
 if page == "Team":
     render_section_start("Team Collaboration", "Manage member access for the selected workspace")
     col1, col2 = st.columns([1.1, 1], gap="large")
@@ -806,14 +736,11 @@ if page == "Team":
                 st.success("Member added")
                 st.rerun()
 
-        st.caption("This currently stores collaboration access in the database. Email delivery needs SMTP or auth invite flow.")
+        st.caption("This stores collaboration access in the database. Email delivery needs SMTP or auth invite flow.")
 
     render_section_end()
     st.stop()
 
-# =========================================
-# BILLING PAGE
-# =========================================
 if page == "Billing":
     render_section_start("Billing and Plan", "Workspace subscription and upgrade path")
 
@@ -840,9 +767,6 @@ if page == "Billing":
     render_section_end()
     st.stop()
 
-# =========================================
-# FILE UPLOAD
-# =========================================
 render_section_start("Upload Financial Data", "Start a new analysis run for the selected workspace")
 uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 render_section_end()
@@ -882,9 +806,6 @@ if not uploaded_file:
     render_section_end()
     st.stop()
 
-# =========================================
-# DATA PROCESSING
-# =========================================
 df = pd.read_csv(uploaded_file)
 df = clean_dataframe(df)
 df = safe_date_column(df)
@@ -1001,9 +922,6 @@ with m4:
         unsafe_allow_html=True,
     )
 
-# =========================================
-# DASHBOARD
-# =========================================
 if page == "Dashboard":
     d1, d2 = st.columns([1.05, 1], gap="large")
 
@@ -1075,9 +993,6 @@ if page == "Dashboard":
     st.pyplot(fig, use_container_width=True)
     render_section_end()
 
-# =========================================
-# ANOMALIES
-# =========================================
 elif page == "Anomalies":
     a1, a2 = st.columns([1.3, 0.95], gap="large")
 
@@ -1172,9 +1087,6 @@ elif page == "Anomalies":
                     st.error(f"Assistant error: {e}")
         render_section_end()
 
-# =========================================
-# REPORTS
-# =========================================
 elif page == "Reports":
     render_section_start("Export Reports", "Download structured outputs for audit documentation")
 
