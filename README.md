@@ -7,6 +7,12 @@ ProAudit AI is an AI-powered financial statement analysis platform that assists 
 ---
 
 ## Preview
+<img width="800" height="371" alt="1776743025862" src="https://github.com/user-attachments/assets/1887fe35-5c89-48ab-b468-bcb69c210701" />
+
+
+
+
+
 
 > Add screenshots of the dashboard, anomaly detection results, generated audit insights, and exported reports here.
 
