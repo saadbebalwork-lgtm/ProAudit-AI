@@ -1,146 +1,151 @@
-# 🧠 ProAudit AI – Financial Statement Analyzer
+# ProAudit AI
 
-🚀 AI-powered audit analytics platform that detects financial anomalies, generates audit insights, and produces professional workpapers.
+**Live Application:** https://saadbebalwork-lgtm-proaudit-ai-fd-g1fvbn.streamlit.app
 
----
-
-## 🌐 Live Demo
-
-👉 https://saadbebalwork-lgtm-proaudit-ai-fd-g1fvbn.streamlit.app
+ProAudit AI is an AI-powered financial statement analysis platform that assists auditors and financial analysts in identifying unusual financial patterns, generating audit insights, and producing professional audit documentation.
 
 ---
 
-## 📌 Overview
+## Preview
 
-ProAudit AI is a SaaS-style application designed to assist auditors and analysts in identifying unusual financial patterns using statistical methods and AI.
-
-The platform allows users to upload financial datasets, analyze multiple metrics, detect anomalies, and generate automated audit insights with downloadable reports.
+> Add screenshots of the dashboard, anomaly detection results, generated audit insights, and exported reports here.
 
 ---
 
-## 🚀 Features
+## Overview
 
-* 📊 Multi-metric anomaly detection (Z-score based)
-* 🤖 AI-generated audit insights (LLM-powered)
-* 📄 Downloadable audit reports (PDF)
-* 📥 Export workpapers (Excel)
-* 🔐 User authentication (Login / Signup)
-* 📈 Interactive dashboard with visualizations
-* 🧠 Smart column detection for flexible datasets
+Traditional financial statement analysis often requires auditors to manually review large datasets to identify unusual transactions and potential risks. This process can be repetitive, time-consuming, and difficult to scale.
+
+ProAudit AI streamlines this workflow by combining statistical anomaly detection with AI-assisted analysis. Users can upload financial datasets, automatically identify unusual patterns, generate audit observations, and export professional reports through an interactive web application.
 
 ---
 
-## 🧠 Tech Stack
+## Why I Built This
 
-| Layer         | Technology                        |
-| ------------- | --------------------------------- |
-| Frontend      | Streamlit                         |
-| Backend       | Python                            |
-| Data          | Pandas                            |
-| Visualization | Matplotlib                        |
-| AI Engine     | OpenAI API                        |
-| Reporting     | ReportLab (PDF), OpenPyXL (Excel) |
+As someone with a background in both accounting and data science, I wanted to explore how artificial intelligence could improve traditional audit workflows. My goal was to build a practical application that demonstrates how AI can assist auditors by reducing repetitive analysis, improving consistency, and generating meaningful insights from financial data.
 
 ---
 
-## 📂 Project Structure
+## Key Features
 
-```id="code1"
-ProAudit-AI/
-│── FD.py                # Main Streamlit app
-│── requirements.txt     # Dependencies
-│── README.md            # Documentation
-│── .gitignore
+- Upload financial datasets for analysis
+- Detect statistical anomalies using Z-score analysis
+- Generate AI-assisted audit observations
+- Interactive dashboard with financial visualizations
+- Automatic financial column detection
+- Export audit workpapers to Excel
+- Generate professional PDF audit reports
+- Secure user authentication
+
+---
+
+## Technology Stack
+
+### Frontend
+
+- Streamlit
+
+### Backend
+
+- Python
+
+### Data Processing
+
+- Pandas
+- NumPy
+
+### Data Visualization
+
+- Matplotlib
+
+### Artificial Intelligence
+
+- OpenAI API
+
+### Reporting
+
+- ReportLab
+- OpenPyXL
+
+---
+
+## Application Workflow
+
+```text
+Financial Dataset (CSV)
+          │
+          ▼
+Data Processing
+          │
+          ▼
+Statistical Analysis (Z-score)
+          │
+          ▼
+AI Audit Analysis
+          │
+          ▼
+Audit Insights & Recommendations
+          │
+          ▼
+PDF / Excel Report Generation
 ```
 
 ---
 
-## ▶️ Run Locally
+## My Contributions
 
-```bash id="code2"
-git clone https://github.com/your-username/ProAudit-AI.git
-cd ProAudit-AI
-pip install -r requirements.txt
-export OPENAI_API_KEY="your_api_key"
-streamlit run FD.py
-```
+This is an independently developed project where I was responsible for:
 
----
-
-## 🔐 Environment Variables
-
-Create environment variable:
-
-```bash id="code3"
-OPENAI_API_KEY=your_api_key
-```
-
-⚠️ Never expose your API keys in code.
+- Designing the application architecture
+- Building the Streamlit user interface
+- Developing the financial anomaly detection workflow
+- Integrating AI-generated audit insights
+- Implementing automated PDF and Excel report generation
+- Designing the financial data processing pipeline
+- Deploying and maintaining the application
 
 ---
 
-## 📊 How It Works
+## Engineering Challenges
 
-1. Upload a CSV file
-2. Select financial metrics
-3. System calculates Z-scores
-4. Flags anomalies automatically
-5. AI generates audit insights
-6. Download report (PDF / Excel)
+Some of the technical challenges addressed during development include:
 
----
-
-## 🎯 Use Cases
-
-* Financial statement analysis
-* Audit risk identification
-* Fraud detection (early-stage signals)
-* Data-driven auditing workflows
+- Processing financial datasets with varying structures
+- Automatically identifying relevant financial columns
+- Balancing statistical analysis with AI-generated insights
+- Producing audit-ready reports in multiple formats
+- Maintaining a responsive user experience while processing large datasets
 
 ---
 
-## 💼 Resume Value
+## Future Enhancements
 
-This project demonstrates:
+Future improvements planned for ProAudit AI include:
 
-* End-to-end SaaS development
-* AI integration in real-world workflows
-* Data analysis & anomaly detection
-* Secure API handling
-* Report automation (PDF/Excel)
-
----
-
-## 🔮 Future Enhancements
-
-* ☁️ AWS deployment (S3 + Lambda + RDS)
-* 🔐 OAuth authentication (Google / Microsoft)
-* 📊 Advanced ML models (Isolation Forest, Autoencoders)
-* 📁 Multi-client audit dashboards
-* 🧾 Audit trail & compliance logs
+- Machine learning-based anomaly detection (Isolation Forest, Autoencoders)
+- Multi-client audit workspace
+- Audit trail and compliance logging
+- Role-based access control
+- Cloud-native deployment on AWS
+- Integration with ERP and accounting platforms
+- Enhanced AI-generated audit documentation
 
 ---
 
-## 👤 Author
+## Source Code
+
+The production implementation is maintained in a private repository because it contains proprietary implementation details, backend configuration, authentication workflows, and integrations with third-party services.
+
+This repository is intended to showcase the project's architecture, functionality, and overall design. Additional implementation details and implementation decisions can be discussed during interviews.
+
+---
+
+## Author
 
 **Saad Bebal**
 
-* 🎓 MS Data Science – DePaul University
-* 💼 DevOps / Cloud Engineer
-* 🔗 GitHub: https://github.com/your-username
+Portfolio: https://www.saadbebal.com
 
----
+LinkedIn: https://linkedin.com/in/saad-bebal-a5a582268
 
-## ⭐ Support
-
-If you like this project:
-
-👉 Star the repo
-👉 Share feedback
-👉 Connect on LinkedIn
-
----
-
-## 📜 License
-
-This project is for educational and portfolio purposes.
+Email: saadbebal.work@gmail.com
