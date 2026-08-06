@@ -704,9 +704,7 @@ if page == "Team":
 
     members = get_team_members(st.session_state.selected_client_id)
 
-    # =========================
     # LEFT: CURRENT MEMBERS
-    # =========================
     with col1:
         st.subheader("Current Members")
 
@@ -734,9 +732,8 @@ if page == "Team":
         else:
             st.info("No team members added yet.")
 
-    # =========================
     # RIGHT: INVITE MEMBER
-    # =========================
+    
     with col2:
         st.subheader("Invite Member")
 
